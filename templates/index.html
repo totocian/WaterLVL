@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WaterLVL — Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <header>
+    <h1>WaterLVL</h1>
+    <div class="controls">
+      <label>Range:
+        <select id="rangeSelect">
+          <option value="1h">1 hour</option>
+          <option value="6h">6 hours</option>
+          <option value="24h" selected>24 hours</option>
+          <option value="7d">7 days</option>
+          <option value="30d">30 days</option>
+          <option value="all">All time</option>
+        </select>
+      </label>
+      <button id="pollBtn" title="Fetch latest readings now">&#8635; Poll now</button>
+      <span id="lastUpdated"></span>
+    </div>
+  </header>
+
+  <main>
+    <section class="cards" id="cards"></section>
+    <section class="chart-wrap">
+      <canvas id="chart"></canvas>
+    </section>
+  </main>
+
+  <script>
+    const COLORS = ["#3b82f6","#10b981","#f59e0b","#ef4444","#8b5cf6","#06b6d4"];
+
+    let chart = null;
+    let devices = [];
+
+    // ---- utility ----
+    function fmt(val) {
+      return val == null ? "—" : Number(val).toFixed(1);
+    }
+
+    function setLastUpdated() {
+      document.getElementById("lastUpdated").textContent =
+        "Updated " + new Date().toLocaleTimeString();
+    }
+
+    // ---- cards ----
+    function renderCards(latestByDevice) {
+      const el = document.getElementById("cards");
+      el.innerHTML = "";
+      devices.forEach((d, i) => {
+        const latest = latestByDevice[d.device_id];
+        const card = document.createElement("div");
+        card.className = "card";
+        card.style.borderColor = COLORS[i % COLORS.length];
+        card.innerHTML = `
+          <div class="card-name">${d.name}</div>
+          <div class="card-value">${fmt(latest?.value)}<span class="card-unit">%</span></div>
+          <div class="card-ts">${latest ? new Date(latest.ts * 1000).toLocaleString() : "No data"}</div>`;
+        el.appendChild(card);
+      });
+    }
+
+    // ---- chart ----
+    function buildDatasets(rows) {
+      const byDevice = {};
+      rows.forEach(r => {
+        if (!byDevice[r.device_id]) byDevice[r.device_id] = [];
+        byDevice[r.device_id].push({ x: r.ts * 1000, y: r.value });
+      });
+
+      return devices.map((d, i) => ({
+        label: d.name,
+        data: byDevice[d.device_id] || [],
+        borderColor: COLORS[i % COLORS.length],
+        backgroundColor: COLORS[i % COLORS.length] + "22",
+        tension: 0.3,
+        pointRadius: 2,
+        fill: false,
+      }));
+    }
+
+    function renderChart(datasets) {
+      const ctx = document.getElementById("chart").getContext("2d");
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: "line",
+        data: { datasets },
+        options: {
+          responsive: true,
+          interaction: { mode: "index", intersect: false },
+          plugins: {
+            legend: { position: "top" },
+            tooltip: {
+              callbacks: {
+                label: ctx => ` ${ctx.dataset.label}: ${fmt(ctx.parsed.y)}%`
+              }
+            }
+          },
+          scales: {
+            x: {
+              type: "time",
+              time: { tooltipFormat: "MMM d, HH:mm" },
+              title: { display: true, text: "Time" }
+            },
+            y: {
+              title: { display: true, text: "Water Level (%)" },
+              min: 0,
+              max: 100,
+            }
+          }
+        }
+      });
+    }
+
+    // ---- data loading ----
+    async function load() {
+      const range = document.getElementById("rangeSelect").value;
+
+      if (!devices.length) {
+        const res = await fetch("/api/devices");
+        devices = await res.json();
+      }
+
+      const res = await fetch(`/api/readings?range=${range}`);
+      const rows = await res.json();
+
+      // Latest value per device
+      const latest = {};
+      rows.forEach(r => {
+        if (!latest[r.device_id] || r.ts > latest[r.device_id].ts) {
+          latest[r.device_id] = r;
+        }
+      });
+
+      renderCards(latest);
+      renderChart(buildDatasets(rows));
+      setLastUpdated();
+    }
+
+    // ---- poll button ----
+    document.getElementById("pollBtn").addEventListener("click", async () => {
+      const btn = document.getElementById("pollBtn");
+      btn.disabled = true;
+      btn.textContent = "Polling…";
+      await fetch("/api/poll", { method: "POST" });
+      await load();
+      btn.disabled = false;
+      btn.textContent = "↻ Poll now";
+    });
+
+    document.getElementById("rangeSelect").addEventListener("change", load);
+
+    // Auto-refresh every 5 minutes
+    load();
+    setInterval(load, 5 * 60 * 1000);
+  </script>
+</body>
+</html>
