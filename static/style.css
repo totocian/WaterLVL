@@ -22,6 +22,12 @@ header h1 { font-size: 1.5rem; font-weight: 700; color: #38bdf8; }
 }
 #pollBtn:hover { background: #38bdf8; }
 #pollBtn:disabled { background: #475569; cursor: default; }
+#resetZoomBtn {
+  background: #334155; color: #e2e8f0; border: 1px solid #475569;
+  border-radius: 0.375rem; padding: 0.35rem 0.9rem;
+  font-size: 0.875rem; cursor: pointer; transition: background 0.15s;
+}
+#resetZoomBtn:hover { background: #475569; }
 #lastUpdated { font-size: 0.75rem; color: #64748b; }
 
 main { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem; }

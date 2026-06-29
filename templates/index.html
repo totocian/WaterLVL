@@ -6,6 +6,8 @@
   <title>WaterLVL - Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
@@ -23,6 +25,7 @@
         </select>
       </label>
       <button id="pollBtn">&#8635; Poll now</button>
+      <button id="resetZoomBtn" title="Reset chart zoom">&#8982; Reset zoom</button>
       <span id="lastUpdated"></span>
     </div>
   </header>
@@ -120,6 +123,19 @@
           scales: {
             x: { type: "time", time: { tooltipFormat: "MMM d, HH:mm" }, title: { display: true, text: "Time" } },
             y: { title: { display: true, text: "Water Level (%)" }, min: 0, max: 100 }
+          },
+          plugins: {
+            zoom: {
+              zoom: {
+                wheel: { enabled: true },
+                pinch: { enabled: true },
+                mode: "x",
+              },
+              pan: {
+                enabled: true,
+                mode: "x",
+              }
+            }
           }
         }
       });
@@ -141,6 +157,10 @@
       renderChart(buildDatasets(rows));
       setLastUpdated();
     }
+
+    document.getElementById("resetZoomBtn").addEventListener("click", () => {
+      if (chart) chart.resetZoom();
+    });
 
     document.getElementById("pollBtn").addEventListener("click", async () => {
       const btn = document.getElementById("pollBtn");
