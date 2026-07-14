@@ -3,7 +3,7 @@ import os
 import time
 
 from tuya_client import get_device_status, parse_devices_env
-from db import insert_reading
+from db import insert_reading, get_recent_values
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +66,16 @@ def poll_once():
                 logger.warning("No numeric DPS found for device %s (%s)", device_id, name)
                 continue
             code, value = result
+            recent = get_recent_values(device_id, limit=5)
+            if recent:
+                avg = sum(recent) / len(recent)
+                threshold = float(os.environ.get("ANOMALY_THRESHOLD", 25))
+                if abs(value - avg) > threshold:
+                    logger.warning(
+                        "Skipping anomalous reading for %s (%s): %.2f vs avg %.2f",
+                        name, device_id, value, avg,
+                    )
+                    continue
             insert_reading(ts, device_id, name, code, value)
             logger.info("Recorded %s (%s): %.2f [%s]", name, device_id, value, code)
         except Exception:

@@ -55,6 +55,15 @@ def query_readings(device_ids: list[str] | None, since_ts: int, until_ts: int):
     return [dict(r) for r in rows]
 
 
+def get_recent_values(device_id: str, limit: int = 5) -> list[float]:
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT value FROM readings WHERE device_id = ? ORDER BY ts DESC LIMIT ?",
+            (device_id, limit),
+        ).fetchall()
+    return [r["value"] for r in rows]
+
+
 def list_devices():
     with get_conn() as conn:
         rows = conn.execute(
