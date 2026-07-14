@@ -32,7 +32,7 @@
       if (deviceRows.length < 2) return false;
       const min = Math.min(...deviceRows.map(r => r.value));
       const max = Math.max(...deviceRows.map(r => r.value));
-      return (max - min) <= 1.5;
+      return (max - min) <= 2.5;
     }
 
     async function load() {
