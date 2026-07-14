@@ -28,6 +28,15 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/tank/<device_id>")
+def tank_detail(device_id):
+    devices = list_devices()
+    device = next((d for d in devices if d["device_id"] == device_id), None)
+    if device is None:
+        return "Device not found", 404
+    return render_template("tank.html", device_id=device_id, name=device["name"])
+
+
 @app.route("/api/devices")
 def api_devices():
     return jsonify(list_devices())

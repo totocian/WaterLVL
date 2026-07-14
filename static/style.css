@@ -1,150 +1,96 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
 body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
 
 /* ---- Header ---- */
 header {
-  display: flex; align-items: center; justify-content: space-between;
-  flex-wrap: wrap; gap: 0.5rem; padding: 0.75rem 1rem;
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.75rem 1rem;
   background: #1e293b; border-bottom: 1px solid #334155;
   position: sticky; top: 0; z-index: 10;
 }
-header h1 { font-size: 1.2rem; font-weight: 700; color: #38bdf8; }
-
-#lastUpdated { font-size: 0.7rem; color: #64748b; flex: 1; text-align: center; }
-
+header h1 { font-size: 1.15rem; font-weight: 700; color: #38bdf8; flex: 1; }
+.back-btn {
+  font-size: 1.3rem; color: #38bdf8; text-decoration: none;
+  padding: 0.2rem 0.5rem; border-radius: 0.375rem;
+  background: #1e3a5f; line-height: 1;
+}
 .controls { display: flex; align-items: center; gap: 0.5rem; }
-
 .controls select {
   background: #334155; color: #e2e8f0; border: 1px solid #475569;
   border-radius: 0.375rem; padding: 0.4rem 0.5rem; font-size: 0.8rem;
   -webkit-appearance: none; appearance: none; cursor: pointer;
 }
-
 #pollBtn, #resetZoomBtn {
   background: #334155; color: #e2e8f0; border: 1px solid #475569;
   border-radius: 0.375rem; padding: 0.4rem 0.65rem;
-  font-size: 1rem; cursor: pointer; line-height: 1;
-  transition: background 0.15s; min-width: 2.2rem;
+  font-size: 1rem; cursor: pointer; line-height: 1; transition: background 0.15s;
 }
 #pollBtn { background: #0ea5e9; border-color: #0ea5e9; }
 #pollBtn:hover { background: #38bdf8; }
 #pollBtn:disabled { background: #475569; border-color: #475569; cursor: default; }
 #resetZoomBtn:hover { background: #475569; }
 
-/* ---- Main layout ---- */
+/* ---- Main ---- */
 main { padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
+.last-updated { font-size: 0.65rem; color: #475569; text-align: center; }
 
-/* ---- Tank grid ---- */
+/* ---- Home tank grid ---- */
 .tanks {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 0.75rem;
 }
 
-.tank-card {
-  background: #1e293b;
-  border-radius: 0.75rem;
-  padding: 0.75rem 0.5rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  border: 1px solid #334155;
+a.tank-card {
+  text-decoration: none; color: inherit;
+  background: #1e293b; border-radius: 0.75rem; padding: 1rem 0.75rem;
+  display: flex; flex-direction: column; align-items: center; gap: 0.6rem;
+  border: 1px solid #334155; cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  -webkit-tap-highlight-color: transparent;
 }
+a.tank-card:active { background: #243447; border-color: #38bdf8; }
 
-.tank-name {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #94a3b8;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  text-align: center;
-}
-
-.tank-wrap {
-  display: flex;
-  align-items: flex-end;
-  gap: 0.3rem;
-}
-
+.tank-name { font-size: 0.8rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
+.tank-wrap { display: flex; align-items: flex-end; gap: 0.4rem; }
 .tank-body {
-  width: 64px;
-  height: 130px;
-  border: 3px solid #475569;
-  border-radius: 6px 6px 4px 4px;
-  background: #0f172a;
-  position: relative;
-  overflow: hidden;
+  width: 72px; height: 150px;
+  border: 3px solid #475569; border-radius: 6px 6px 4px 4px;
+  background: #0f172a; position: relative; overflow: hidden;
 }
-
-.tank-water {
-  width: 100%;
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  transition: height 1s ease;
-  border-radius: 0 0 2px 2px;
-}
-
-.tank-ripple {
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 6px;
-  background: rgba(255,255,255,0.15);
-  animation: ripple 2s ease-in-out infinite;
-}
-
-@keyframes ripple {
-  0%, 100% { opacity: 0.3; transform: scaleX(1); }
-  50% { opacity: 0.6; transform: scaleX(0.95); }
-}
-
-.tank-pct {
-  position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 1rem;
-  font-weight: 700;
-  color: #fff;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.6);
-  z-index: 2;
-  white-space: nowrap;
-}
-
+.tank-water { width: 100%; position: absolute; bottom: 0; left: 0; transition: height 1s ease; border-radius: 0 0 2px 2px; }
+.tank-ripple { position: absolute; top: 0; left: 0; right: 0; height: 6px; background: rgba(255,255,255,0.15); animation: ripple 2s ease-in-out infinite; }
+@keyframes ripple { 0%,100% { opacity:0.3; transform:scaleX(1); } 50% { opacity:0.6; transform:scaleX(0.95); } }
+.tank-pct { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 1.1rem; font-weight: 700; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.6); z-index: 2; white-space: nowrap; }
 .tank-unit { font-size: 0.6rem; font-weight: 400; margin-left: 1px; }
+.tank-scale { display: flex; flex-direction: column; justify-content: space-between; height: 150px; font-size: 0.55rem; color: #64748b; padding: 2px 0; }
+.tank-ts { font-size: 0.62rem; color: #64748b; text-align: center; }
 
-.tank-scale {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  height: 130px;
-  font-size: 0.5rem;
-  color: #64748b;
-  padding: 2px 0;
-}
+/* ---- Tank detail page ---- */
+.tank-detail { padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
 
-.tank-ts {
-  font-size: 0.6rem;
-  color: #64748b;
-  text-align: center;
+.detail-top { display: flex; gap: 1rem; align-items: flex-start; }
+
+.detail-tank-wrap { display: flex; align-items: flex-end; gap: 0.4rem; flex-shrink: 0; }
+.detail-tank-body { width: 80px; height: 180px; }
+.detail-scale { height: 180px; }
+
+.detail-stats {
+  flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;
 }
+.stat-card {
+  background: #1e293b; border: 1px solid #334155; border-radius: 0.6rem;
+  padding: 0.6rem 0.75rem; display: flex; flex-direction: column; gap: 0.2rem;
+}
+.stat-label { font-size: 0.65rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; }
+.stat-value { font-size: 1.1rem; font-weight: 700; color: #e2e8f0; }
+.stat-ts { font-size: 0.7rem; font-weight: 400; }
 
 /* ---- Chart ---- */
-.chart-wrap {
-  background: #1e293b;
-  border-radius: 0.75rem;
-  padding: 0.75rem;
-  border: 1px solid #334155;
-}
-canvas { max-height: 300px; touch-action: none; }
+.chart-wrap { background: #1e293b; border-radius: 0.75rem; padding: 0.75rem; border: 1px solid #334155; }
+canvas { max-height: 320px; touch-action: none; }
 
-/* ---- Phone tweaks ---- */
-@media (max-width: 480px) {
-  header h1 { font-size: 1rem; }
-  #lastUpdated { display: none; }
-  .tanks { grid-template-columns: repeat(2, 1fr); }
-  .tank-body { width: 56px; height: 110px; }
-  .tank-scale { height: 110px; }
-  canvas { max-height: 240px; }
+/* ---- Wide screens: 4-column home grid ---- */
+@media (min-width: 640px) {
+  .tanks { grid-template-columns: repeat(4, 1fr); }
 }

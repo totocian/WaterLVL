@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WaterLVL – {{ name }}</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header>
+    <a href="/" class="back-btn">&#8592;</a>
+    <h1 id="tankTitle">{{ name }}</h1>
+    <div class="controls">
+      <select id="rangeSelect">
+        <option value="1h">1h</option>
+        <option value="6h">6h</option>
+        <option value="24h" selected>24h</option>
+        <option value="7d">7d</option>
+        <option value="30d">30d</option>
+        <option value="all">All</option>
+      </select>
+      <button id="resetZoomBtn">&#8982;</button>
+    </div>
+  </header>
+
+  <main class="tank-detail">
+    <div class="detail-top">
+      <div class="detail-tank-wrap">
+        <div class="tank-body detail-tank-body">
+          <div class="tank-water" id="detailWater" style="height:0%;background:#10b981;">
+            <div class="tank-ripple"></div>
+          </div>
+          <div class="tank-pct" id="detailPct">–<span class="tank-unit">%</span></div>
+        </div>
+        <div class="tank-scale detail-scale">
+          <span>100%</span><span>75%</span><span>50%</span><span>25%</span><span>0%</span>
+        </div>
+      </div>
+      <div class="detail-stats">
+        <div class="stat-card"><div class="stat-label">Current</div><div class="stat-value" id="statCurrent">–</div></div>
+        <div class="stat-card"><div class="stat-label">Min (period)</div><div class="stat-value" id="statMin">–</div></div>
+        <div class="stat-card"><div class="stat-label">Max (period)</div><div class="stat-value" id="statMax">–</div></div>
+        <div class="stat-card"><div class="stat-label">Last update</div><div class="stat-value stat-ts" id="statTs">–</div></div>
+      </div>
+    </div>
+
+    <section class="chart-wrap">
+      <canvas id="chart"></canvas>
+    </section>
+    <p id="lastUpdated" class="last-updated"></p>
+  </main>
+
+  <script>
+    const DEVICE_ID = {{ device_id | tojson }};
+    const COLOR = "#3b82f6";
+    let chart = null;
+
+    function fmt(val) { return val == null ? "–" : Number(val).toFixed(1) + "%"; }
+
+    function getColor(pct) {
+      if (pct >= 60) return "#10b981";
+      if (pct >= 30) return "#f59e0b";
+      return "#ef4444";
+    }
+
+    async function load() {
+      const range = document.getElementById("rangeSelect").value;
+      const res = await fetch(`/api/readings?device_ids=${DEVICE_ID}&range=${range}`);
+      const rows = await res.json();
+
+      if (!rows.length) return;
+
+      const values = rows.map(r => r.value);
+      const minVal = Math.min(...values);
+      const maxVal = Math.max(...values);
+      const padding = Math.max((maxVal - minVal) * 0.1, 2);
+      const yMin = Math.max(0, Math.floor(minVal - padding));
+      const yMax = Math.min(100, Math.ceil(maxVal + padding));
+
+      const latest = rows[rows.length - 1];
+      const pct = Math.min(100, Math.max(0, latest.value));
+      const color = getColor(pct);
+
+      document.getElementById("detailWater").style.height = pct + "%";
+      document.getElementById("detailWater").style.background = color;
+      document.getElementById("detailPct").innerHTML = pct.toFixed(1) + '<span class="tank-unit">%</span>';
+      document.getElementById("statCurrent").textContent = fmt(latest.value);
+      document.getElementById("statMin").textContent = fmt(minVal);
+      document.getElementById("statMax").textContent = fmt(maxVal);
+      document.getElementById("statTs").textContent = new Date(latest.ts * 1000).toLocaleString();
+
+      const dataset = {
+        label: latest.name,
+        data: rows.map(r => ({ x: r.ts * 1000, y: r.value })),
+        borderColor: color,
+        backgroundColor: color + "22",
+        tension: 0.3,
+        borderWidth: 2,
+        pointRadius: 0,
+        fill: true,
+      };
+
+      const ctx = document.getElementById("chart").getContext("2d");
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: "line",
+        data: { datasets: [dataset] },
+        options: {
+          responsive: true,
+          interaction: { mode: "index", intersect: false },
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: ctx => ` ${fmt(ctx.parsed.y)}` } },
+            zoom: {
+              zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: "x" },
+              pan: { enabled: true, mode: "x", button: 0 }
+            }
+          },
+          scales: {
+            x: { type: "time", time: { tooltipFormat: "MMM d, HH:mm" }, title: { display: false } },
+            y: { title: { display: true, text: "Water Level (%)" }, min: yMin, max: yMax }
+          }
+        }
+      });
+
+      document.getElementById("lastUpdated").textContent = "Updated " + new Date().toLocaleTimeString();
+    }
+
+    document.getElementById("resetZoomBtn").addEventListener("click", () => { if (chart) chart.resetZoom(); });
+    document.getElementById("rangeSelect").addEventListener("change", load);
+    load();
+    setInterval(load, 60 * 60 * 1000);
+  </script>
+</body>
+</html>

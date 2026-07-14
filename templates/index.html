@@ -3,176 +3,80 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WaterLVL - Dashboard</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+  <title>WaterLVL</title>
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
   <header>
     <h1>WaterLVL</h1>
-    <span id="lastUpdated"></span>
     <div class="controls">
-      <select id="rangeSelect">
-        <option value="1h">1h</option>
-        <option value="6h">6h</option>
-        <option value="24h" selected>24h</option>
-        <option value="7d">7d</option>
-        <option value="30d">30d</option>
-        <option value="all">All</option>
-      </select>
       <button id="pollBtn">&#8635;</button>
-      <button id="resetZoomBtn">&#8982;</button>
     </div>
   </header>
 
   <main>
-    <!-- Tank visualizations -->
     <section class="tanks" id="tanks"></section>
-
-    <!-- Time series chart -->
-    <section class="chart-wrap">
-      <canvas id="chart"></canvas>
-    </section>
+    <p id="lastUpdated" class="last-updated"></p>
   </main>
 
   <script>
-    const COLORS = ["#3b82f6","#10b981","#f59e0b","#ef4444","#8b5cf6","#06b6d4"];
-    const COLORS_RGBA = ["rgba(59,130,246,0.6)","rgba(16,185,129,0.6)","rgba(245,158,11,0.6)","rgba(239,68,68,0.6)"];
-    let chart = null;
-    let devices = [];
-
     function fmt(val) { return val == null ? "-" : Number(val).toFixed(1); }
 
-    function setLastUpdated() {
-      document.getElementById("lastUpdated").textContent = "Updated " + new Date().toLocaleTimeString();
-    }
-
     function getColor(pct) {
-      if (pct >= 60) return "#10b981"; // green
-      if (pct >= 30) return "#f59e0b"; // amber
-      return "#ef4444";                // red
+      if (pct >= 60) return "#10b981";
+      if (pct >= 30) return "#f59e0b";
+      return "#ef4444";
     }
 
-    function renderTanks(latestByDevice) {
+    async function load() {
+      const [devRes, rowRes] = await Promise.all([
+        fetch("/api/devices"),
+        fetch("/api/readings?range=24h")
+      ]);
+      const devices = await devRes.json();
+      const rows = await rowRes.json();
+
+      const latest = {};
+      rows.forEach(r => {
+        if (!latest[r.device_id] || r.ts > latest[r.device_id].ts) latest[r.device_id] = r;
+      });
+
       const el = document.getElementById("tanks");
       el.innerHTML = "";
-      devices.forEach((d, i) => {
-        const latest = latestByDevice[d.device_id];
-        const pct = latest ? Math.min(100, Math.max(0, latest.value)) : 0;
+      devices.forEach(d => {
+        const l = latest[d.device_id];
+        const pct = l ? Math.min(100, Math.max(0, l.value)) : 0;
         const color = getColor(pct);
-        const ts = latest ? new Date(latest.ts * 1000).toLocaleString() : "No data";
-
+        const ts = l ? new Date(l.ts * 1000).toLocaleString() : "No data";
         el.innerHTML += `
-          <div class="tank-card">
+          <a class="tank-card" href="/tank/${d.device_id}">
             <div class="tank-name">${d.name}</div>
             <div class="tank-wrap">
               <div class="tank-body">
-                <div class="tank-water" style="height:${pct}%; background:${color};">
+                <div class="tank-water" style="height:${pct}%;background:${color};">
                   <div class="tank-ripple"></div>
                 </div>
                 <div class="tank-pct">${fmt(pct)}<span class="tank-unit">%</span></div>
               </div>
               <div class="tank-scale">
-                <span>100%</span>
-                <span>75%</span>
-                <span>50%</span>
-                <span>25%</span>
-                <span>0%</span>
+                <span>100%</span><span>75%</span><span>50%</span><span>25%</span><span>0%</span>
               </div>
             </div>
             <div class="tank-ts">${ts}</div>
-          </div>`;
+          </a>`;
       });
-    }
 
-    function buildDatasets(rows) {
-      const byDevice = {};
-      rows.forEach(r => {
-        if (!byDevice[r.device_id]) byDevice[r.device_id] = [];
-        byDevice[r.device_id].push({ x: r.ts * 1000, y: r.value });
-      });
-      return devices.map((d, i) => ({
-        label: d.name,
-        data: byDevice[d.device_id] || [],
-        borderColor: COLORS[i % COLORS.length],
-        backgroundColor: COLORS[i % COLORS.length] + "22",
-        tension: 0.3,
-        borderWidth: 1.5,
-        pointRadius: 0,
-        fill: false,
-      }));
+      document.getElementById("lastUpdated").textContent = "Updated " + new Date().toLocaleTimeString();
     }
-
-    function renderChart(datasets) {
-      const ctx = document.getElementById("chart").getContext("2d");
-      if (chart) chart.destroy();
-      chart = new Chart(ctx, {
-        type: "line",
-        data: { datasets },
-        options: {
-          responsive: true,
-          interaction: { mode: "index", intersect: false },
-          plugins: {
-            legend: { position: "top" },
-            tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmt(ctx.parsed.y)}%` } }
-          },
-          scales: {
-            x: { type: "time", time: { tooltipFormat: "MMM d, HH:mm" }, title: { display: true, text: "Time" } },
-            y: { title: { display: true, text: "Water Level (%)" }, min: 20, max: 100 }
-          },
-          plugins: {
-            zoom: {
-              zoom: {
-                wheel: { enabled: true },
-                pinch: { enabled: true },
-                mode: "x",
-              },
-              pan: {
-                enabled: true,
-                mode: "x",
-                button: 0,
-              }
-            }
-          }
-        }
-      });
-    }
-
-    async function load() {
-      const range = document.getElementById("rangeSelect").value;
-      if (!devices.length) {
-        const res = await fetch("/api/devices");
-        devices = await res.json();
-      }
-      const res = await fetch(`/api/readings?range=${range}`);
-      const rows = await res.json();
-      const latest = {};
-      rows.forEach(r => {
-        if (!latest[r.device_id] || r.ts > latest[r.device_id].ts) latest[r.device_id] = r;
-      });
-      renderTanks(latest);
-      renderChart(buildDatasets(rows));
-      setLastUpdated();
-    }
-
-    document.getElementById("resetZoomBtn").addEventListener("click", () => {
-      if (chart) chart.resetZoom();
-    });
 
     document.getElementById("pollBtn").addEventListener("click", async () => {
       const btn = document.getElementById("pollBtn");
       btn.disabled = true;
-      btn.textContent = "Polling...";
       await fetch("/api/poll", { method: "POST" });
       await load();
       btn.disabled = false;
-      btn.textContent = "↻ Poll now";
     });
 
-    document.getElementById("rangeSelect").addEventListener("change", load);
     load();
     setInterval(load, 60 * 60 * 1000);
   </script>
