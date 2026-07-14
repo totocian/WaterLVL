@@ -13,20 +13,18 @@
 <body>
   <header>
     <h1>WaterLVL</h1>
+    <span id="lastUpdated"></span>
     <div class="controls">
-      <label>Range:
-        <select id="rangeSelect">
-          <option value="1h">1 hour</option>
-          <option value="6h">6 hours</option>
-          <option value="24h" selected>24 hours</option>
-          <option value="7d">7 days</option>
-          <option value="30d">30 days</option>
-          <option value="all">All time</option>
-        </select>
-      </label>
-      <button id="pollBtn">&#8635; Poll now</button>
-      <button id="resetZoomBtn" title="Reset chart zoom">&#8982; Reset zoom</button>
-      <span id="lastUpdated"></span>
+      <select id="rangeSelect">
+        <option value="1h">1h</option>
+        <option value="6h">6h</option>
+        <option value="24h" selected>24h</option>
+        <option value="7d">7d</option>
+        <option value="30d">30d</option>
+        <option value="all">All</option>
+      </select>
+      <button id="pollBtn">&#8635;</button>
+      <button id="resetZoomBtn">&#8982;</button>
     </div>
   </header>
 
@@ -103,7 +101,7 @@
         backgroundColor: COLORS[i % COLORS.length] + "22",
         tension: 0.3,
         borderWidth: 1.5,
-        pointRadius: 2,
+        pointRadius: 0,
         fill: false,
       }));
     }
@@ -123,7 +121,7 @@
           },
           scales: {
             x: { type: "time", time: { tooltipFormat: "MMM d, HH:mm" }, title: { display: true, text: "Time" } },
-            y: { title: { display: true, text: "Water Level (%)" }, min: 0, max: 100 }
+            y: { title: { display: true, text: "Water Level (%)" }, min: 20, max: 100 }
           },
           plugins: {
             zoom: {
