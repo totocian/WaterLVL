@@ -28,6 +28,13 @@
       return "#ef4444";
     }
 
+    function isStuck(deviceRows) {
+      if (deviceRows.length < 2) return false;
+      const min = Math.min(...deviceRows.map(r => r.value));
+      const max = Math.max(...deviceRows.map(r => r.value));
+      return (max - min) <= 1;
+    }
+
     async function load() {
       const [devRes, rowRes] = await Promise.all([
         fetch("/api/devices"),
@@ -37,8 +44,11 @@
       const rows = await rowRes.json();
 
       const latest = {};
+      const byDevice = {};
       rows.forEach(r => {
         if (!latest[r.device_id] || r.ts > latest[r.device_id].ts) latest[r.device_id] = r;
+        if (!byDevice[r.device_id]) byDevice[r.device_id] = [];
+        byDevice[r.device_id].push(r);
       });
 
       const el = document.getElementById("tanks");
@@ -48,8 +58,12 @@
         const pct = l ? Math.min(100, Math.max(0, l.value)) : 0;
         const color = getColor(pct);
         const ts = l ? new Date(l.ts * 1000).toLocaleString() : "No data";
+        const stuck = isStuck(byDevice[d.device_id] || []);
+        const warning = stuck
+          ? `<div class="tank-warning">&#9888; Check tank visually</div>`
+          : "";
         el.innerHTML += `
-          <a class="tank-card" href="/tank/${d.device_id}">
+          <a class="tank-card${stuck ? " tank-card--warn" : ""}" href="/tank/${d.device_id}">
             <div class="tank-name">${d.name}</div>
             <div class="tank-wrap">
               <div class="tank-body">
@@ -63,6 +77,7 @@
               </div>
             </div>
             <div class="tank-ts">${ts}</div>
+            ${warning}
           </a>`;
       });
 
